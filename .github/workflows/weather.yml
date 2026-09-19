@@ -36,9 +36,9 @@ jobs:
           test -n "$SECRET_SENDER_PASSWORD" || { echo "Missing secret: SENDER_PASSWORD"; exit 1; }
           test -n "$SECRET_RECEIVER_EMAIL"  || { echo "Missing secret: RECEIVER_EMAIL"; exit 1; }
 
-          sed -i "s|^SENDER_EMAIL = .*|SENDER_EMAIL = \"${SECRET_SENDER_EMAIL}\"|" weather.py
-          sed -i "s|^SENDER_PASSWORD = .*|SENDER_PASSWORD = \"${SECRET_SENDER_PASSWORD}\"|" weather.py
-          sed -i "s|^RECEIVER_EMAIL = .*|RECEIVER_EMAIL = \"${SECRET_RECEIVER_EMAIL}\"|" weather.py
+          sed -i "s|^SENDER_EMAIL = .*|SENDER_EMAIL = |"${SECRET_SENDER_EMAIL}|"|" weather.py
+          sed -i "s|^SENDER_PASSWORD = .*|SENDER_PASSWORD = |"${SECRET_SENDER_PASSWORD}|"|" weather.py
+          sed -i "s|^RECEIVER_EMAIL = .*|RECEIVER_EMAIL = |"${SECRET_RECEIVER_EMAIL}|"|" weather.py
 
       # Fails the run (red X) if the email was not actually sent
       - name: Run weather email script
