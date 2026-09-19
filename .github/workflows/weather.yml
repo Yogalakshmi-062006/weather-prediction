@@ -1,0 +1,77 @@
+# =============================================================================
+# Daily Paris Weather Email - GitHub Actions workflow
+# =============================================================================
+# Save this file in your repository at:
+#     .github/workflows/daily-weather.yml
+#
+# What it does:
+#   1. Runs every day on a schedule (and on demand with the "Run workflow" button)
+#   2. Installs Python + the "requests" library
+#   3. Fills in the three credential variables at the top of paris_weather_email.py
+#      using your GitHub Secrets (the file in Git keeps only placeholders)
+#   4. Runs the script, which fetches the weather and sends the email
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   SENDER_EMAIL     -> your sending Gmail address
+#   SENDER_PASSWORD  -> your Google App Password (16 characters, no spaces)
+#   RECEIVER_EMAIL   -> the address that receives the report
+# =============================================================================
+
+name: Daily Paris Weather Email
+
+on:
+  # Runs automatically every day.
+  # GitHub uses UTC time. "0 6 * * *" = 06:00 UTC every day.
+  # Format: minute hour day-of-month month day-of-week
+  schedule:
+    - cron: "0 6 * * *"
+
+  # Adds a "Run workflow" button in the Actions tab for manual testing
+  workflow_dispatch:
+
+jobs:
+  send-weather:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: download your repository code onto the runner
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: install Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Step 3: install the only third-party library the script needs
+      - name: Install dependencies
+        run: pip install requests
+
+      # Step 4: replace the placeholder lines in the script with your real
+      # values from GitHub Secrets. This happens only on the temporary runner,
+      # so the real values are never stored in your Git history.
+      - name: Insert credentials into script
+        env:
+          SECRET_SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SECRET_SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          SECRET_RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        run: |
+          # Stop early with a clear message if a secret was not created
+          test -n "$SECRET_SENDER_EMAIL"    || { echo "Missing secret: SENDER_EMAIL"; exit 1; }
+          test -n "$SECRET_SENDER_PASSWORD" || { echo "Missing secret: SENDER_PASSWORD"; exit 1; }
+          test -n "$SECRET_RECEIVER_EMAIL"  || { echo "Missing secret: RECEIVER_EMAIL"; exit 1; }
+
+          # Rewrite the three variable lines in the script
+          sed -i "s|^SENDER_EMAIL = .*|SENDER_EMAIL = \"${SECRET_SENDER_EMAIL}\"|" paris_weather_email.py
+          sed -i "s|^SENDER_PASSWORD = .*|SENDER_PASSWORD = \"${SECRET_SENDER_PASSWORD}\"|" paris_weather_email.py
+          sed -i "s|^RECEIVER_EMAIL = .*|RECEIVER_EMAIL = \"${SECRET_RECEIVER_EMAIL}\"|" paris_weather_email.py
+
+      # Step 5: run the script.
+      # The script prints errors instead of crashing, so we check the output:
+      # if "Email sent successfully" is missing, this step fails and the run
+      # shows a red X (GitHub can then email you about the failure).
+      - name: Run weather email script
+        run: |
+          python paris_weather_email.py | tee run_output.txt
+          grep -q "Email sent successfully" run_output.txt
